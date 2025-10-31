@@ -1,51 +1,70 @@
-// api.js - API service for making requests to the backend
+// api.js - Unified API service for communicating with backend
 
-import axios from 'axios';
+import axios from "axios";
 
-// Create axios instance with base URL
+// =========================
+// ⚙️ Create Axios Instance
+// =========================
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
-// Add request interceptor for authentication
+// =========================
+// 🔐 Request Interceptor
+// =========================
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    // ✅ Get token from localStorage
+    const storedUser = localStorage.getItem("user");
+    let token = localStorage.getItem("token");
+
+    // ✅ If token not directly saved, try extracting from user object
+    if (!token && storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        token = parsedUser?.token;
+      } catch (err) {
+        console.warn("Failed to parse user from localStorage:", err);
+      }
+    }
+
+    // ✅ Attach Authorization header if token exists
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Add response interceptor for error handling
+// =========================
+// ⚠️ Response Interceptor
+// =========================
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Handle authentication errors
+    // ✅ Auto-logout on 401 (Unauthorized)
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
     }
     return Promise.reject(error);
   }
 );
 
-// Post API services
+// =========================
+// 📝 POST API SERVICES
+// =========================
 export const postService = {
-  // Get all posts with optional pagination and filters
+  // Get all posts (with optional pagination and category)
   getAllPosts: async (page = 1, limit = 10, category = null) => {
     let url = `/posts?page=${page}&limit=${limit}`;
-    if (category) {
-      url += `&category=${category}`;
-    }
+    if (category) url += `&category=${category}`;
     const response = await api.get(url);
     return response.data;
   },
@@ -56,19 +75,19 @@ export const postService = {
     return response.data;
   },
 
-  // Create a new post
+  // ✅ Create a new post (protected)
   createPost: async (postData) => {
-    const response = await api.post('/posts', postData);
+    const response = await api.post("/posts", postData);
     return response.data;
   },
 
-  // Update an existing post
+  // ✅ Update an existing post (protected)
   updatePost: async (id, postData) => {
     const response = await api.put(`/posts/${id}`, postData);
     return response.data;
   },
 
-  // Delete a post
+  // ✅ Delete a post (protected)
   deletePost: async (id) => {
     const response = await api.delete(`/posts/${id}`);
     return response.data;
@@ -87,50 +106,66 @@ export const postService = {
   },
 };
 
-// Category API services
+// =========================
+// 🗂️ CATEGORY API SERVICES
+// =========================
 export const categoryService = {
-  // Get all categories
+  // ✅ Get all categories
   getAllCategories: async () => {
-    const response = await api.get('/categories');
+    const response = await api.get("/categories");
     return response.data;
   },
 
-  // Create a new category
+  // ✅ Create a new category (for admin)
   createCategory: async (categoryData) => {
-    const response = await api.post('/categories', categoryData);
+    const response = await api.post("/categories", categoryData);
+    return response.data;
+  },
+
+  // ✅ Delete a category (optional)
+  deleteCategory: async (id) => {
+    const response = await api.delete(`/categories/${id}`);
     return response.data;
   },
 };
 
-// Auth API services
+// =========================
+// 👤 AUTH API SERVICES
+// =========================
 export const authService = {
-  // Register a new user
+  // ✅ Register a new user
   register: async (userData) => {
-    const response = await api.post('/auth/register', userData);
+    const response = await api.post("/users/register", userData);
     return response.data;
   },
 
-  // Login user
+  // ✅ Login and persist token
   login: async (credentials) => {
-    const response = await api.post('/auth/login', credentials);
+    const response = await api.post("/users/login", credentials);
+
     if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem(
+        "user",
+        JSON.stringify({ ...response.data.user, token: response.data.token })
+      );
     }
+
     return response.data;
   },
 
-  // Logout user
+  // ✅ Logout
   logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
   },
 
-  // Get current user
+  // ✅ Get current user
   getCurrentUser: () => {
-    const user = localStorage.getItem('user');
+    const user = localStorage.getItem("user");
     return user ? JSON.parse(user) : null;
   },
 };
 
-export default api; 
+// ✅ Default export
+export default api;
