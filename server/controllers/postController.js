@@ -1,207 +1,209 @@
-const Post = require("../models/Post");
-const Category = require("../models/Category");
-const User = require("../models/User");
+// server/controllers/postController.js
+const fs = require('fs');
+const path = require('path');
+const Post = require('../models/Post');
+const Category = require('../models/Category');
+const User = require('../models/User');
+const mongoose = require('mongoose');
 
-// ✅ Create a new post
-exports.createPost = async (req, res) => {
-  console.log("🧠 [DEBUG] Incoming POST request to /api/posts");
-  console.log("📥 [DEBUG] Request body:", req.body);
+const UPLOADS_BASE = 'posts'; // store as 'posts/<filename>' so public path becomes /uploads/posts/<filename>
 
+async function generateUniqueSlug(title, excludeId = null) {
+  let base = title.toLowerCase().replace(/[^\w ]+/g, '').replace(/ +/g, '-').slice(0, 120);
+  let slug = base;
+  let counter = 0;
+  while (true) {
+    const q = { slug };
+    if (excludeId) q._id = { $ne: excludeId };
+    const existing = await mongoose.models.Post.findOne(q);
+    if (!existing) return slug;
+    counter++;
+    slug = `${base}-${Math.floor(Math.random() * 10000)}-${counter}`;
+    if (counter > 50) break;
+  }
+  return slug + '-' + Date.now();
+}
+
+function removeUploadedFile(filePath) {
   try {
-    const { title, content, category, excerpt, tags, isPublished } = req.body;
-    const userId = req.user?._id;
+    if (!filePath) return;
+    if (filePath.includes('default-post.jpg')) return;
+    const full = path.join(process.cwd(), 'server', 'uploads', filePath);
+    if (fs.existsSync(full)) {
+      fs.unlinkSync(full);
+      console.log('🗑️ Removed file:', full);
+    }
+  } catch (err) {
+    console.warn('⚠️ Failed to remove file:', err.message);
+  }
+}
 
+exports.createPost = async (req, res) => {
+  console.log('🧠 Incoming POST /api/posts', { bodyType: typeof req.body, file: req.file && req.file.filename });
+  try {
+    // Note: when multipart/form-data, req.body values are strings
+    const title = req.body.title;
+    const content = req.body.content;
+    const category = req.body.category;
+    const excerpt = req.body.excerpt;
+    const tags = req.body.tags; // can be CSV or array depending on client
+    const isPublishedRaw = req.body.isPublished;
+
+    const userId = req.user && (req.user._id || req.user.id);
     if (!title || !category) {
-      console.warn("⚠️ [WARN] Missing required fields: title or category");
-      return res.status(400).json({ message: "Title and category are required" });
+      return res.status(400).json({ message: 'Title and category are required' });
     }
 
-    console.log("🔍 [DEBUG] Checking if category exists:", category);
     const foundCategory = await Category.findById(category);
-    if (!foundCategory) {
-      console.log("❌ [DEBUG] Category not found");
-      return res.status(404).json({ message: "Category not found" });
-    }
+    if (!foundCategory) return res.status(404).json({ message: 'Category not found' });
 
-    console.log("👤 [DEBUG] Checking if user exists:", userId);
     const foundUser = await User.findById(userId);
-    if (!foundUser) {
-      console.log("❌ [DEBUG] User not found");
-      return res.status(404).json({ message: "User not found" });
+    if (!foundUser) return res.status(404).json({ message: 'User not found' });
+
+    const slug = await generateUniqueSlug(title);
+
+    // featuredImage: if multer stored a file, save as 'posts/<filename>'
+    let featuredImage = 'default-post.jpg';
+    if (req.file && req.file.filename) {
+      featuredImage = `${UPLOADS_BASE}/${req.file.filename}`;
     }
 
-    // ✅ Generate slug manually before saving (fixes slug validation error)
-    const slug = title
-      .toLowerCase()
-      .replace(/[^\w ]+/g, "")
-      .replace(/ +/g, "-");
+    // parse tags
+    let tagsArray = [];
+    if (tags) {
+      if (Array.isArray(tags)) tagsArray = tags;
+      else if (typeof tags === 'string') tagsArray = tags.split(',').map((t) => t.trim()).filter(Boolean);
+    }
 
-    // ✅ Create new post document
-    const post = new Post({
+    const newPost = new Post({
       title,
       content,
       category: foundCategory._id,
-      tags,
+      tags: tagsArray,
       excerpt,
       author: foundUser._id,
       slug,
-      isPublished: isPublished ?? false, // default false if not provided
+      featuredImage,
+      isPublished: isPublishedRaw === 'true' || isPublishedRaw === true || isPublishedRaw === '1',
     });
 
-    console.log("🧩 [DEBUG] New post object created:", {
-      title: post.title,
-      author: post.author.toString(),
-      category: post.category.toString(),
-      slug: post.slug,
-    });
-
-    const savedPost = await post.save();
-
-    console.log("💾 [INFO] Post saved successfully:", {
-      id: savedPost._id.toString(),
-      title: savedPost.title,
-      slug: savedPost.slug,
-    });
-
-    res.status(201).json({
-      message: "Post created successfully",
-      post: savedPost,
-    });
-  } catch (error) {
-    console.error("🔥 [ERROR] Error creating post:", error);
-    res.status(500).json({
-      message: "Server error while creating post",
-      error: error.message,
-    });
+    const saved = await newPost.save();
+    console.log('💾 Post saved', { id: saved._id.toString(), slug: saved.slug });
+    return res.status(201).json({ post: saved });
+  } catch (err) {
+    console.error('🔥 Error creating post:', err);
+    return res.status(500).json({ message: 'Server error while creating post', error: err.message });
   }
 };
 
-// ✅ Get all posts (optionally filtered by category or author)
 exports.getAllPosts = async (req, res) => {
-  console.log("📡 [DEBUG] Fetching posts with filters:", req.query);
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 10, 100);
+    const skip = (page - 1) * limit;
     const filter = {};
     if (req.query.category) filter.category = req.query.category;
     if (req.query.author) filter.author = req.query.author;
 
     const posts = await Post.find(filter)
-      .populate("author", "name email")
-      .populate("category", "name")
-      .sort({ createdAt: -1 });
+      .populate('author', 'name email')
+      .populate('category', 'name')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    console.log(`✅ [INFO] Fetched ${posts.length} posts`);
-    res.json(posts);
+    return res.json(posts);
   } catch (err) {
-    console.error("🔥 [ERROR] Error fetching posts:", err);
-    res.status(500).json({ message: "Error fetching posts", error: err.message });
+    console.error('🔥 Error getting posts:', err);
+    return res.status(500).json({ message: 'Error fetching posts', error: err.message });
   }
 };
 
-// ✅ Get single post by slug
 exports.getPostBySlug = async (req, res) => {
-  console.log("🔍 [DEBUG] Fetching post by slug:", req.params.slug);
+  const slug = req.params.slug;
   try {
-    const post = await Post.findOne({ slug: req.params.slug })
-      .populate("author", "name email")
-      .populate("category", "name");
+    if (!slug) return res.status(400).json({ message: 'Slug is required' });
+    const post = await Post.findOne({ slug }).populate('author', 'name email').populate('category', 'name');
+    if (!post) return res.status(404).json({ message: 'Post not found' });
 
-    if (!post) {
-      console.warn("🚫 [WARN] Post not found for slug:", req.params.slug);
-      return res.status(404).json({ message: "Post not found" });
+    if (typeof post.incrementViewCount === 'function') {
+      try {
+        await post.incrementViewCount();
+      } catch (incErr) {
+        console.warn('Failed increment view', incErr.message);
+      }
     }
-
-    // Increment view count (if you have this method in your model)
-    if (post.incrementViewCount) {
-      await post.incrementViewCount();
-      console.log("👀 [INFO] View count incremented for post:", post.slug);
-    }
-
-    res.json(post);
+    return res.json(post);
   } catch (err) {
-    console.error("🔥 [ERROR] Error fetching post:", err);
-    res.status(500).json({ message: "Error fetching post", error: err.message });
+    console.error('🔥 Error fetching post by slug:', err);
+    return res.status(500).json({ message: 'Error fetching post', error: err.message });
   }
 };
 
-// ✅ Update post
 exports.updatePost = async (req, res) => {
-  console.log("✏️ [DEBUG] Updating post:", req.params.id);
   try {
-    const { title, content, category, tags, excerpt, isPublished } = req.body;
     const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ message: 'Post not found' });
 
-    if (!post) {
-      console.warn("🚫 [WARN] Post not found for update:", req.params.id);
-      return res.status(404).json({ message: "Post not found" });
+    const { title, content, category, excerpt, tags, isPublished } = req.body;
+
+    if (req.file && req.file.filename) {
+      // remove old file if non-default
+      if (post.featuredImage && !post.featuredImage.includes('default-post.jpg')) {
+        removeUploadedFile(post.featuredImage);
+      }
+      post.featuredImage = `posts/${req.file.filename}`;
     }
 
     post.title = title || post.title;
     post.content = content || post.content;
     post.category = category || post.category;
-    post.tags = tags || post.tags;
     post.excerpt = excerpt || post.excerpt;
-    post.isPublished = isPublished !== undefined ? isPublished : post.isPublished;
+    post.tags = Array.isArray(tags) ? tags : (typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(Boolean) : post.tags);
+    post.isPublished = isPublished !== undefined ? (isPublished === 'true' || isPublished === true) : post.isPublished;
 
-    // ✅ regenerate slug if title changed
-    if (title) {
-      post.slug = title
-        .toLowerCase()
-        .replace(/[^\w ]+/g, "")
-        .replace(/ +/g, "-");
+    if (title && title !== post.title) {
+      post.slug = await generateUniqueSlug(title, post._id);
     }
 
     const updated = await post.save();
-
-    console.log("💾 [INFO] Post updated successfully:", updated._id.toString());
-    res.json(updated);
+    return res.json({ post: updated });
   } catch (err) {
-    console.error("🔥 [ERROR] Error updating post:", err);
-    res.status(500).json({ message: "Error updating post", error: err.message });
+    console.error('🔥 Error updating post:', err);
+    return res.status(500).json({ message: 'Error updating post', error: err.message });
   }
 };
 
-// ✅ Delete post
 exports.deletePost = async (req, res) => {
-  console.log("🗑️ [DEBUG] Deleting post:", req.params.id);
   try {
     const post = await Post.findByIdAndDelete(req.params.id);
-    if (!post) {
-      console.warn("🚫 [WARN] Post not found for deletion:", req.params.id);
-      return res.status(404).json({ message: "Post not found" });
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+
+    if (post.featuredImage && !post.featuredImage.includes('default-post.jpg')) {
+      removeUploadedFile(post.featuredImage);
     }
 
-    console.log("✅ [INFO] Post deleted successfully:", post._id.toString());
-    res.json({ message: "Post deleted successfully" });
+    return res.json({ message: 'Post deleted successfully' });
   } catch (err) {
-    console.error("🔥 [ERROR] Error deleting post:", err);
-    res.status(500).json({ message: "Error deleting post", error: err.message });
+    console.error('🔥 Error deleting post:', err);
+    return res.status(500).json({ message: 'Error deleting post', error: err.message });
   }
 };
 
-// ✅ Add comment
 exports.addComment = async (req, res) => {
-  console.log("💬 [DEBUG] Adding comment to post:", req.params.id);
   try {
     const { content } = req.body;
-    if (!content) {
-      console.warn("⚠️ [WARN] Comment content missing");
-      return res.status(400).json({ message: "Comment cannot be empty" });
-    }
+    if (!content) return res.status(400).json({ message: 'Comment cannot be empty' });
 
     const post = await Post.findById(req.params.id);
-    if (!post) {
-      console.warn("🚫 [WARN] Post not found for comment:", req.params.id);
-      return res.status(404).json({ message: "Post not found" });
-    }
+    if (!post) return res.status(404).json({ message: 'Post not found' });
 
-    if (typeof post.addComment === "function") {
+    if (typeof post.addComment === 'function') {
       await post.addComment(req.user._id, content);
-      console.log("✅ [INFO] Comment added successfully to post:", post._id.toString());
     }
-
-    res.status(201).json({ message: "Comment added successfully", post });
+    return res.status(201).json({ post });
   } catch (err) {
-    console.error("🔥 [ERROR] Error adding comment:", err);
-    res.status(500).json({ message: "Error adding comment", error: err.message });
+    console.error('🔥 Error adding comment:', err);
+    return res.status(500).json({ message: 'Error adding comment', error: err.message });
   }
 };
