@@ -15,8 +15,8 @@ export default function App() {
       <AuthProvider>
         <Router>
           <Navbar /> {/* ✅ Navbar always visible */}
-          <div className="container mx-auto p-4">
-            <Routes>
+          <div className="min-h-screen flex flex-col bg-lightblue text-gray-800">
+            <Routes className="flex-grow container mx-auto px-4 py-6">
               <Route path="/" element={<Home />} />
               <Route path="/register" element={<Register />} />
               <Route path="/login" element={<Login />} />
