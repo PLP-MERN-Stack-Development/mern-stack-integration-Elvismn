@@ -1,78 +1,75 @@
-# MERN Stack Integration Assignment
+# MERN Blog Application
 
-This assignment focuses on building a full-stack MERN (MongoDB, Express.js, React.js, Node.js) application that demonstrates seamless integration between front-end and back-end components.
+A full-stack blog application built using the MERN (MongoDB, Express.js, React.js, Node.js) stack.
 
-## Assignment Overview
+## Features
 
-You will build a blog application with the following features:
-1. RESTful API with Express.js and MongoDB
-2. React front-end with component architecture
-3. Full CRUD functionality for blog posts
-4. User authentication and authorization
-5. Advanced features like image uploads and comments
+- User authentication (Register/Login)
+- Create, Read, Update, and Delete blog posts
+- Responsive design for all devices
+- Rich text editor for blog content
+- User profile management
+- Comment system
 
-## Project Structure
+## Demo Screenshots
 
+![Login Page](./client/public/Register.png)
+*Login interface for users*
+
+![Blog List](./client/public/bloglist.png)
+*Main blog listing page*
+
+![Create Post](./client/public/Createpost.png)
+*Create new blog post interface*
+
+## Technologies Used
+
+- MongoDB - Database
+- Express.js - Backend framework
+- React.js - Frontend framework
+- Node.js - Runtime environment
+- JWT - Authentication
+- Bootstrap - Styling
+
+## Installation
+
+1. Clone the repository
+```bash
+git clone https://github.com/yourusername/mern-blog.git
 ```
-mern-blog/
-├── client/                 # React front-end
-│   ├── public/             # Static files
-│   ├── src/                # React source code
-│   │   ├── components/     # Reusable components
-│   │   ├── pages/          # Page components
-│   │   ├── hooks/          # Custom React hooks
-│   │   ├── services/       # API services
-│   │   ├── context/        # React context providers
-│   │   └── App.jsx         # Main application component
-│   └── package.json        # Client dependencies
-├── server/                 # Express.js back-end
-│   ├── config/             # Configuration files
-│   ├── controllers/        # Route controllers
-│   ├── models/             # Mongoose models
-│   ├── routes/             # API routes
-│   ├── middleware/         # Custom middleware
-│   ├── utils/              # Utility functions
-│   ├── server.js           # Main server file
-│   └── package.json        # Server dependencies
-└── README.md               # Project documentation
+
+2. Install dependencies for backend and frontend
+```bash
+# Install backend dependencies
+cd backend
+npm install
+
+# Install frontend dependencies
+cd frontend
+npm install
 ```
 
-## Getting Started
+3. Create a .env file in the backend directory and add:
+```
+MONGODB_URI=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret
+```
 
-1. Accept the GitHub Classroom assignment invitation
-2. Clone your personal repository that was created by GitHub Classroom
-3. Follow the setup instructions in the `Week4-Assignment.md` file
-4. Complete the tasks outlined in the assignment
+4. Run the application
+```bash
+# Run backend
+cd backend
+npm start
 
-## Files Included
+# Run frontend
+cd frontend
+npm start
+```
 
-- `Week4-Assignment.md`: Detailed assignment instructions
-- Starter code for both client and server:
-  - Basic project structure
-  - Configuration files
-  - Sample models and components
+## Contributing
 
-## Requirements
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
-- Node.js (v18 or higher)
-- MongoDB (local installation or Atlas account)
-- npm or yarn
-- Git
+## License
 
-## Submission
-
-Your work will be automatically submitted when you push to your GitHub Classroom repository. Make sure to:
-
-1. Complete both the client and server portions of the application
-2. Implement all required API endpoints
-3. Create the necessary React components and hooks
-4. Document your API and setup process in the README.md
-5. Include screenshots of your working application
-
-## Resources
-
-- [MongoDB Documentation](https://docs.mongodb.com/)
-- [Express.js Documentation](https://expressjs.com/)
-- [React Documentation](https://react.dev/)
-- [Node.js Documentation](https://nodejs.org/en/docs/)
-- [Mongoose Documentation](https://mongoosejs.com/docs/) 
+[MIT](https://choosealicense.com/licenses/mit/)

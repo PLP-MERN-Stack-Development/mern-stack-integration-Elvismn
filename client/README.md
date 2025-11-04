@@ -1,16 +1,72 @@
-# React + Vite
+# client — MERN Stack Integration (Elvismn)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Lightweight React client for the mern-stack-integration-Elvismn project.
 
-Currently, two official plugins are available:
+## Prerequisites
+- Node.js 16+ (or LTS)
+- npm 8+ or yarn
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Install
+From the `client/` folder:
+```bash
+npm install
+# or
+yarn
+```
 
-## React Compiler
+## Environment
+Create a `.env` in `client/` (do not commit secrets). Example:
+```
+REACT_APP_API_URL=http://localhost:5000/api
+REACT_APP_MAP_KEY=your_map_key_here
+```
+The client reads `REACT_APP_API_URL` to reach the backend API.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Available scripts
+```bash
+npm run start    # start dev server (react-scripts / Vite)
+npm run build    # create production build in /build (or /dist)
+npm run test     # run tests
+npm run lint     # run linter
+npm run format   # format code (if configured)
+```
+Replace `npm` with `yarn` as needed.
 
-## Expanding the ESLint configuration
+## Development
+- Start backend first (if required) or point `REACT_APP_API_URL` to a running API.
+- Run `npm run start` and open `http://localhost:3000` (default) in a browser.
+- Use hot reload for fast iteration.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Build & Deploy
+- Run `npm run build`.
+- Serve the generated `build/` (or `dist/`) folder with a static server (Netlify, Vercel, GitHub Pages, nginx).
+- If deploying behind the backend, ensure the server serves `index.html` for client-side routes and sets correct CORS headers.
+
+## Project structure (example)
+```
+client/
+├─ public/
+├─ src/
+│  ├─ components/
+│  ├─ pages/
+│  ├─ hooks/
+│  ├─ services/   # API calls
+│  ├─ utils/
+│  └─ index.js
+├─ .env
+├─ package.json
+└─ README.md
+```
+
+## Troubleshooting
+- 401/403 from API: check `REACT_APP_API_URL` and authentication headers.
+- CORS errors: enable CORS in backend or use proxy in `package.json`.
+- Port conflict: change client port via env (e.g., `PORT=3001`).
+
+## Contributing
+Create feature branches, lint and test before opening PRs.
+
+## License
+Follow repository-level license.
+
+--- 
