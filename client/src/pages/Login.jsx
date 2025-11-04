@@ -30,27 +30,27 @@ export default function Login() {
         onSubmit={handleSubmit}
         className="bg-white p-6 rounded-lg shadow-md w-full max-w-sm"
       >
-        <h2 className="text-2xl font-semibold mb-4 text-center">Login</h2>
+        <h2 className="text-2xl font-semibold mb-4 text-center italic">Welcome back to MERN Blog!!</h2>
         {error && <p className="text-red-500 mb-3">{error}</p>}
         <input
           type="email"
           name="email"
-          placeholder="Email"
+          placeholder="Input your Email here"
           onChange={handleChange}
-          className="w-full p-2 border mb-3 rounded"
+          className="w-full p-2 border mb-3 rounded italic"
           required
         />
         <input
           type="password"
           name="password"
-          placeholder="Password"
+          placeholder="Input your Password here"
           onChange={handleChange}
-          className="w-full p-2 border mb-4 rounded"
+          className="w-full p-2 border mb-4 rounded italic"
           required
         />
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+          className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 italic transition"
         >
           Login
         </button>

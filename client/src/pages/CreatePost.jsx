@@ -1,10 +1,10 @@
+// src/pages/CreatePost.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { postService, categoryService } from "../services/api";
 
 export default function CreatePost() {
   const navigate = useNavigate();
-
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState({
     title: "",
@@ -13,42 +13,38 @@ export default function CreatePost() {
     excerpt: "",
     isPublished: false,
   });
-
+  const [featuredImage, setFeaturedImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [categoryLoading, setCategoryLoading] = useState(true);
 
-  // ✅ Fetch categories when component mounts
   useEffect(() => {
-    const fetchCategories = async () => {
+    (async () => {
       try {
         const res = await categoryService.getAllCategories();
         setCategories(res);
       } catch (err) {
         console.error("Failed to load categories:", err);
-        setError("Could not load categories. Please try again.");
+        setError("Could not load categories");
       } finally {
         setCategoryLoading(false);
       }
-    };
-
-    fetchCategories();
+    })();
   }, []);
 
-  // ✅ Handle form input changes
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm((f) => ({
-      ...f,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    setForm((f) => ({ ...f, [name]: type === "checkbox" ? checked : value }));
   };
 
-  // ✅ Handle form submission
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    setFeaturedImage(file);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
-
     if (!form.title.trim() || !form.content.trim() || !form.category) {
       setError("Title, content, and category are required.");
       return;
@@ -56,14 +52,20 @@ export default function CreatePost() {
 
     try {
       setLoading(true);
-      const created = await postService.createPost(form);
-      navigate(`/posts/${created._id}`);
+      const fd = new FormData();
+      fd.append("title", form.title);
+      fd.append("content", form.content);
+      fd.append("category", form.category);
+      fd.append("excerpt", form.excerpt || "");
+      fd.append("isPublished", form.isPublished ? "true" : "false");
+      if (featuredImage) fd.append("featuredImage", featuredImage);
+
+      const created = await postService.createPost(fd); // returns { post }
+      const saved = created?.post || created;
+      navigate(`/posts/${saved.slug}`);
     } catch (err) {
-      setError(
-        err?.response?.data?.message ||
-          err.message ||
-          "Failed to create post"
-      );
+      console.error("Create error:", err);
+      setError(err?.response?.data?.message || err.message || "Failed to create post");
     } finally {
       setLoading(false);
     }
@@ -72,94 +74,55 @@ export default function CreatePost() {
   return (
     <div className="max-w-3xl mx-auto bg-white p-6 rounded shadow">
       <h2 className="text-2xl font-bold mb-4">Create New Post</h2>
-
       {error && <div className="mb-4 text-red-600">{error}</div>}
-
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Title */}
         <div>
           <label className="block text-sm font-medium">Title</label>
-          <input
-            name="title"
-            value={form.title}
-            onChange={handleChange}
-            className="mt-1 block w-full border rounded px-3 py-2"
-            required
-          />
+          <input name="title" value={form.title} onChange={handleChange} className="mt-1 block w-full border rounded px-3 py-2" required />
         </div>
 
-        {/* Category Dropdown */}
         <div>
           <label className="block text-sm font-medium">Category</label>
           {categoryLoading ? (
             <p className="text-gray-500 text-sm mt-2">Loading categories...</p>
           ) : (
-            <select
-              name="category"
-              value={form.category}
-              onChange={handleChange}
-              className="mt-1 block w-full border rounded px-3 py-2"
-              required
-            >
+            <select name="category" value={form.category} onChange={handleChange} className="mt-1 block w-full border rounded px-3 py-2" required>
               <option value="">Choose category</option>
-              {categories.length > 0 ? (
-                categories.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.name}
-                  </option>
-                ))
-              ) : (
-                <option disabled>No categories available</option>
-              )}
+              {categories.length ? categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>) : <option disabled>No categories</option>}
             </select>
           )}
         </div>
 
-        {/* Excerpt */}
         <div>
           <label className="block text-sm font-medium">Excerpt</label>
-          <input
-            name="excerpt"
-            value={form.excerpt}
-            onChange={handleChange}
-            className="mt-1 block w-full border rounded px-3 py-2"
-          />
+          <input name="excerpt" value={form.excerpt} onChange={handleChange} className="mt-1 block w-full border rounded px-3 py-2" />
         </div>
 
-        {/* Content */}
+        <div>
+          <label className="block text-sm font-medium">Attach Image (optional)</label>
+          <input type="file" accept="image/*" onChange={handleImageChange} className="mt-1 block w-full text-sm" />
+          {featuredImage && (
+            <div className="mt-2">
+              <p className="text-sm text-gray-600">Selected: {featuredImage.name}</p>
+              <img src={URL.createObjectURL(featuredImage)} alt="Preview" className="w-40 h-40 object-cover rounded mt-2" />
+            </div>
+          )}
+        </div>
+
         <div>
           <label className="block text-sm font-medium">Content</label>
-          <textarea
-            name="content"
-            value={form.content}
-            onChange={handleChange}
-            rows="8"
-            className="mt-1 block w-full border rounded px-3 py-2"
-            required
-          />
+          <textarea name="content" value={form.content} onChange={handleChange} rows="8" className="mt-1 block w-full border rounded px-3 py-2" required />
         </div>
 
-        {/* Publish Checkbox */}
         <div className="flex items-center gap-4">
           <label className="inline-flex items-center">
-            <input
-              type="checkbox"
-              name="isPublished"
-              checked={form.isPublished}
-              onChange={handleChange}
-              className="mr-2"
-            />
+            <input type="checkbox" name="isPublished" checked={form.isPublished} onChange={handleChange} className="mr-2" />
             Publish immediately
           </label>
         </div>
 
-        {/* Submit Button */}
         <div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 transition"
-          >
+          <button type="submit" disabled={loading} className="px-4 py-2 bg-orange-500 text-white rounded">
             {loading ? "Creating…" : "Create Post"}
           </button>
         </div>

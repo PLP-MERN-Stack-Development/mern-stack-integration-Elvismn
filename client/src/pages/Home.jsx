@@ -1,7 +1,7 @@
 import React from "react";
 import useFetch from "../hooks/useFetch";
 import { postService } from "../services/api";
-import PostCard from "../components/PostCard";
+import PostCard from "../components/postCard";
 
 export default function Home() {
 const { data: posts, setData: setPosts, loading, error, run } = useFetch(
