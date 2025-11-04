@@ -11,31 +11,59 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-gray-800 text-white px-6 py-3 flex justify-between items-center shadow-md">
-      <Link to="/" className="text-2xl font-bold text-orange-400 hover:text-orange-300">
-        📰 MERN Blog
-      </Link>
+    <nav className="bg-white shadow-md sticky top-0 z-50 rounded-full mb-6">
+      <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+        {/* Logo */}
+        <Link
+          to="/"
+          className="text-2xl font-bold text-indigo-700 hover:text-indigo-800 transition"
+        >
+          📰 MERN Blog
+        </Link>
+        {/* Links */}
+        <div className="flex items-center gap-6">
+          <Link
+            to="/"
+            className="text-gray-700 hover:text-indigo-700 font-medium transition"
+          >
+            Home
+          </Link>
+          <Link
+            to="/create"
+            className="text-gray-700 hover:text-indigo-700 font-medium transition"
+          >
+            Create
+          </Link>
 
-      <div className="space-x-6">
-        <Link to="/" className="hover:text-orange-300 transition">Home</Link>
-        <Link to="/create" className="hover:text-orange-300 transition">Create</Link>
-
-        {isAuthenticated ? (
-          <>
-            <span className="text-orange-400">{user?.name}</span>
-            <button
-              onClick={handleLogout}
-              className="hover:text-red-400 transition"
-            >
-              Logout
-            </button>
-          </>
-        ) : (
-          <>
-            <Link to="/login" className="hover:text-orange-300 transition">Login</Link>
-            <Link to="/register" className="hover:text-orange-300 transition">Register</Link>
-          </>
-        )}
+          {isAuthenticated ? (
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-semibold text-orange-500 bg-orange-100 px-3 py-1 rounded-full">
+                {user?.name}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="text-sm bg-red-500 text-white px-4 py-1 rounded-full hover:bg-red-600 transition"
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <Link
+                to="/login"
+                className="text-sm bg-indigo-500 text-white px-4 py-1 rounded-full hover:bg-indigo-600 transition"
+              >
+                Login
+              </Link>
+              <Link
+                to="/register"
+                className="text-sm bg-gray-100 text-gray-700 px-4 py-1 rounded-full hover:bg-gray-200 transition"
+              >
+                Register
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
     </nav>
   );
